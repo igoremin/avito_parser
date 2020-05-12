@@ -1,0 +1,10 @@
+*.pyc
+*~
+__pycache__
+v_server
+db.sqlite3
+/media/results_files
+/media/proxy_file
+/map_parser/migrations
+.DS_Store
+.idea
