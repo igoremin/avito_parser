@@ -132,6 +132,10 @@ def get_target_value():
             status=True
         )
         new_target.save()
+        return True
+    else:
+        print(f'ERROR GET TARGET VALUE. STATUS CODE : {request.status_code}')
+        return False
 
 
 def change_status():
@@ -211,12 +215,12 @@ class Proxy:
 
 
 def start(use_proxy=False):
-    get_target_value()
-    all_price = AllPriseValues()
-    proxies = Proxy()
-    while True:
-        if load_data(proxy=use_proxy, proxies=proxies, all_price=all_price) is False:
-            break
+    if get_target_value() is True:
+        all_price = AllPriseValues()
+        proxies = Proxy()
+        while True:
+            if load_data(proxy=use_proxy, proxies=proxies, all_price=all_price) is False:
+                break
 
     change_status()
 
