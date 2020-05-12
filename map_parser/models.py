@@ -113,7 +113,7 @@ class Target(models.Model):
         verbose_name_plural = 'Цель по количетву объектов'
 
     def __str__(self):
-        return self.target_value
+        return str(self.target_value)
 
 
 class ProxyFile(models.Model):
