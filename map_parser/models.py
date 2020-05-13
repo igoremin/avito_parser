@@ -116,24 +116,6 @@ class Target(models.Model):
         return str(self.target_value)
 
 
-class ProxyFile(models.Model):
-    proxy_file = models.FileField(upload_to='proxy_file/', blank=True, verbose_name='Файл с прокси')
-
-    class Meta:
-        verbose_name = 'Прокси файл'
-        verbose_name_plural = 'Прокси файл'
-
-    def __str__(self):
-        return 'Settings'
-
-    def update(self, *args, **kwargs):
-        if self.id:
-            old_proxies_file = ProxyFile.objects.get(pk=self.pk).proxy_file
-            if old_proxies_file:
-                old_proxies_file.delete(save=False)
-        super().save(*args, **kwargs)
-
-
 class ProxyIP(models.Model):
     ip = models.CharField(verbose_name='IP адрес', max_length=100, blank=True, null=True)
     port = models.CharField(verbose_name='Порт', max_length=100, blank=True, null=True)
