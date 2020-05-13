@@ -4,8 +4,7 @@ import datetime
 import random
 import os
 from django.conf import settings
-from .models import MapDetails, Target, ProxyFile, ResultFile, ProxyIP
-from json import JSONDecodeError
+from .models import MapDetails, Target, ResultFile, ProxyIP
 from math import ceil
 from openpyxl import Workbook
 from openpyxl.styles import NamedStyle, Font, Border, Side, Alignment, colors
@@ -98,6 +97,8 @@ def get_json(use_proxy, proxies, min_price, max_price, page):
                 return data
             except Exception as err:
                 print(f'ERROR WITH GET JSON. USE PROXY. ERROR CODE : {err}')
+                if settings.DEBUG:
+                    print(request)
                 time.sleep(random.uniform(3, 10))
 
         step += 1
@@ -145,7 +146,10 @@ def get_target_value(use_proxy):
                 return True
             else:
                 print(f'ERROR GET TARGET VALUE. STATUS CODE : {request.status_code}')
-                return False
+                if settings.DEBUG:
+                    print(request.text)
+                step += 1
+                time.sleep(random.uniform(3, 10))
 
         except Exception as err:
             print(f'ERROR : {err}')

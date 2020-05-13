@@ -1,20 +1,22 @@
 from django import forms
-from .models import ProxyFile
-from django.utils.translation import gettext_lazy as _
+from .models import ProxyIP
 
 
-class ProxyFileForm(forms.ModelForm):
+class ProxyIPForm(forms.ModelForm):
     class Meta:
-        model = ProxyFile
-        fields = '__all__'
-
-        labels = {
-            'proxy_file': _(''),
-        }
+        model = ProxyIP
+        fields = ['ip', 'port', 'login', 'password']
 
         field_classes = {
-            'proxy_file': forms.CharField,
+            'ip': forms.CharField,
+            'port': forms.CharField,
+            'login': forms.CharField,
+            'password': forms.CharField,
         }
+
         widgets = {
-            'proxy_file': forms.FileInput(attrs={'class': 'form-control-file'}),
+            'ip': forms.TextInput(attrs={'class': 'form-control'}),
+            'port': forms.TextInput(attrs={'class': 'form-control'}),
+            'login': forms.TextInput(attrs={'class': 'form-control'}),
+            'password': forms.TextInput(attrs={'class': 'form-control'}),
         }

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}
+     Прокси
+{% endblock %}
+
+{% block content %}
+    {% if error_message %}
+        <h1>{{ error_message }}</h1>
+    {% else %}
+        <form method="post">
+
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Сохранить</button>
+
+        </form>
+    {% endif %}
+
+{% endblock %}

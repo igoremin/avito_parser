@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
-from .models import MapDetails, Target, ProxyFile, ResultFile
-from .forms import ProxyFileForm
+from .models import MapDetails, Target, ResultFile, ProxyIP
+from .forms import ProxyIPForm
 import threading
 from .scripts import start, write_results_xlsx_file
 from django.http import JsonResponse
@@ -70,39 +70,36 @@ def main_page(request):
         return redirect(main_page)
 
 
-def proxy_file(request):
+def proxy_ip(request):
     if request.user.is_authenticated:
-        try:
-            settings = ProxyFile.objects.all()[0]
-        except IndexError:
-            settings = ProxyFile()
-            settings.save()
         if request.method == 'GET':
+            try:
+                settings = ProxyIP.objects.all()[0]
+                context = {
+                    'form': ProxyIPForm(initial={
+                        'ip': settings.ip,
+                        'port': settings.port,
+                        'login': settings.login,
+                        'password': settings.password,
+                    }),
+                }
+            except IndexError:
+                context = {
+                    'form': ProxyIPForm()
+                }
 
-            context = {
-                'form': ProxyFileForm(initial={
-                    'proxy_file': settings.proxy_file,
-                }),
-                'old_file_name': settings.proxy_file.name.split('/')[-1] if settings.proxy_file else None
-            }
-
-            return render(request, 'map_parser/proxy_file_form.html', context)
+            return render(request, 'map_parser/proxy_ip_form.html', context)
         else:
-            form = ProxyFileForm(request.POST, request.FILES)
+            form = ProxyIPForm(request.POST)
             if form.is_valid():
-                cleaned_data = form.clean()
-                if cleaned_data['proxy_file']:
-                    settings.proxy_file = request.FILES['proxy_file']
-                    settings.update()
-                else:
-                    settings.save()
-
-            return redirect(proxy_file)
+                ProxyIP.objects.all().delete()
+                form.save()
+            return redirect(proxy_ip)
     else:
         context = {
             'error_message': 'Пользователь должен быть авторизован!'
         }
-        return render(request, 'map_parser/proxy_file_form.html', context)
+        return render(request, 'map_parser/proxy_ip_form.html', context)
 
 
 def all_results_files(request):
