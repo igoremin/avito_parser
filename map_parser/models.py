@@ -134,6 +134,21 @@ class ProxyFile(models.Model):
         super().save(*args, **kwargs)
 
 
+class ProxyIP(models.Model):
+    ip = models.CharField(verbose_name='IP адрес', max_length=100, blank=True, null=True)
+    port = models.CharField(verbose_name='Порт', max_length=100, blank=True, null=True)
+    login = models.CharField(verbose_name='Логин', max_length=100, blank=True, null=True)
+    password = models.CharField(verbose_name='Пароль', max_length=100, blank=True, null=True)
+    change_ip_url = models.CharField(verbose_name='URL для смены IP', max_length=200, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Мобильный прокси'
+        verbose_name_plural = 'Мобильные прокси'
+
+    def __str__(self):
+        return str(f'{self.ip}:{self.port}@{self.login}:{self.password}')
+
+
 class ResultFile(models.Model):
     result_file = models.FileField(upload_to='results_files/', blank=True, verbose_name='Файл с результатами')
 

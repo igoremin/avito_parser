@@ -4,7 +4,7 @@ import datetime
 import random
 import os
 from django.conf import settings
-from .models import MapDetails, Target, ProxyFile, ResultFile
+from .models import MapDetails, Target, ProxyFile, ResultFile, ProxyIP
 from json import JSONDecodeError
 from math import ceil
 from openpyxl import Workbook
@@ -74,26 +74,25 @@ def load_data(proxies, all_price, proxy=False):
             return False
 
 
-def get_json(min_price, max_price, page, use_proxy, proxies):
+def get_json(use_proxy, proxies, min_price, max_price, page, ):
     step = 0
     while step < 10:
-        time.sleep(random.uniform(0.5, 3.5))
+        time.sleep(random.uniform(1, 4))
         url = 'https://www.avito.ru/js/v2/map/items'
         params = {'categoryId': '24', 'locationId': '637640', 'correctorMode': '1', 'page': page, 'map': 'e30=',
                   'params[201]': '1059', 'viewPort[width]': '1404', 'viewPort[height]': '510', 'limit': '20',
                   'priceMin': min_price, 'priceMax': max_price}
-        check_proxy = 'NOT'
         if use_proxy is False:
             try:
-                request = requests.get(url=url, params=params, headers=get_headers())
+                request = requests.get(url=url, params=params, headers=get_headers(), timeout=20)
             except Exception as err:
                 print(err)
                 request = False
         else:
             try:
-                proxy = proxies.get_new_proxy()[0]
-                request = requests.get(url=url, params=params, headers=get_headers(), proxies=proxy)
-                check_proxy = requests.get('https://check-host.net/ip', headers=get_headers(), proxies=proxy).text
+                proxy = proxies.proxy_setting
+                request = requests.get(url=url, params=params, headers=get_headers(), proxies=proxy, timeout=20)
+                # check_proxy = requests.get('https://check-host.net/ip', headers=get_headers(), proxies=proxy).text
             except Exception as err:
                 print(err)
                 request = False
@@ -102,7 +101,7 @@ def get_json(min_price, max_price, page, use_proxy, proxies):
             try:
                 data = request.json()
             except JSONDecodeError:
-                print(f'DECODE ERROR, IP : {check_proxy}')
+                print(f'DECODE ERROR, PROXY : {proxies.proxy_setting}')
             else:
                 return data
         step += 1
@@ -118,24 +117,46 @@ def get_data_from_json(js_data):
     return k
 
 
-def get_target_value():
+def get_target_value(use_proxy):
     url = 'https://www.avito.ru/js/v2/map/items'
     params = {'categoryId': '24', 'locationId': '637640', 'correctorMode': '1', 'page': '1', 'map': 'e30=',
               'params[201]': '1059', 'viewPort[width]': '1404', 'viewPort[height]': '510', 'limit': '20'}
-    request = requests.get(url=url, params=params, headers=get_headers())
-    if request.status_code == 200:
-        data = request.json()
-        target_value = data['count']
-        Target.objects.all().delete()
-        new_target = Target(
-            target_value=int(target_value),
-            status=True
-        )
-        new_target.save()
-        return True
-    else:
-        print(f'ERROR GET TARGET VALUE. STATUS CODE : {request.status_code}')
-        return False
+
+    step = 0
+    while step < 10:
+        try:
+            if use_proxy is False:
+                request = requests.get(url=url, params=params, headers=get_headers(), timeout=20)
+            else:
+                proxy = ProxyIP.objects.all()[0]
+                proxy_setting = {
+                    "http": f"http://{proxy.login}:{proxy.password}@{proxy.ip}:{proxy.port}",
+                    "https": f"https://{proxy.login}:{proxy.password}@{proxy.ip}:{proxy.port}"
+                }
+
+                request = requests.get(url=url, params=params, headers=get_headers(), proxies=proxy_setting, timeout=20)
+
+            if request.status_code == 200:
+                data = request.json()
+                target_value = data['count']
+                Target.objects.all().delete()
+                new_target = Target(
+                    target_value=int(target_value),
+                    status=True
+                )
+                new_target.save()
+                print(f'NEW TARGET : {target_value}')
+                return True
+            else:
+                print(f'ERROR GET TARGET VALUE. STATUS CODE : {request.status_code}')
+                return False
+
+        except Exception as err:
+            print(f'ERROR : {err}')
+            step += 1
+            time.sleep(random.uniform(3, 10))
+
+    return False
 
 
 def change_status():
@@ -168,54 +189,19 @@ class AllPriseValues:
 class Proxy:
     def __init__(self):
         try:
+            self.proxy = ProxyIP.objects.all()[0]
+            self.proxy_setting = {
+                "http": f"http://{self.proxy.login}:{self.proxy.password}@{self.proxy.ip}:{self.proxy.port}",
+                "https": f"https://{self.proxy.login}:{self.proxy.password}@{self.proxy.ip}:{self.proxy.port}"
+            }
             self.file = ProxyFile.objects.all()[0].proxy_file.path
         except IndexError:
-            self.file = False
-
-        if self.file:
-            with open(f'{self.file}', 'r', encoding='utf-8') as proxy_file:
-                all_proxies = [row.strip() for row in proxy_file.readlines()]
-                self.proxies = sorted(all_proxies, key=lambda *args: random.random())
-
-            self.block_proxies = []
-
-    def get_new_proxy(self):
-        new_proxy = False
-        k = 0
-        while new_proxy is False or k < len(self.proxies):
-            new_proxy = self.proxies.pop(0).split(':')
-            if new_proxy not in self.block_proxies:
-                break
-            else:
-                new_proxy = False
-                k += 1
-        if new_proxy is not False:
-            ip, port, login, password = new_proxy[0], new_proxy[1], new_proxy[2], new_proxy[3]
-
-            proxy_setting = {
-                "http": f"http://{login}:{password}@{ip}:{port}",
-                "https": f"https://{login}:{password}@{ip}:{port}"
-            }
-
-            if len(self.proxies) < 1 and self.file is not False:
-                with open(f'{self.file}', 'r', encoding='utf-8') as proxy_file:
-                    all_proxies = [row.strip() for row in proxy_file.readlines()]
-                    not_block_proxies = []
-                    for p in all_proxies:
-                        if p not in self.block_proxies:
-                            not_block_proxies.append(p)
-
-                    self.proxies = sorted(not_block_proxies, key=lambda *args: random.random())
-            return proxy_setting, new_proxy
-        else:
-            return False
-
-    def add_block_proxy(self, block_proxy):
-        self.block_proxies.append(f"{block_proxy[0]}:{block_proxy[1]}:{block_proxy[2]}:{block_proxy[3]}")
+            self.proxy_setting = False
 
 
 def start(use_proxy=False):
-    if get_target_value() is True:
+    if get_target_value(use_proxy=use_proxy) is True:
+        print('TRUE')
         all_price = AllPriseValues()
         proxies = Proxy()
         while True:
