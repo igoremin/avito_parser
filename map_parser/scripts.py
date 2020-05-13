@@ -74,7 +74,7 @@ def load_data(proxies, all_price, proxy=False):
             return False
 
 
-def get_json(use_proxy, proxies, min_price, max_price, page, ):
+def get_json(use_proxy, proxies, min_price, max_price, page):
     step = 0
     while step < 10:
         time.sleep(random.uniform(1, 4))
@@ -85,25 +85,21 @@ def get_json(use_proxy, proxies, min_price, max_price, page, ):
         if use_proxy is False:
             try:
                 request = requests.get(url=url, params=params, headers=get_headers(), timeout=20)
+                data = request.json()
+                return data
             except Exception as err:
-                print(err)
-                request = False
+                print(f'ERROR WITH GET JSON. NOT USE PROXY. ERROR CODE : {err}')
+                time.sleep(random.uniform(3, 10))
         else:
             try:
-                proxy = proxies.proxy_setting
+                proxy = proxies.get_proxy_settings()
                 request = requests.get(url=url, params=params, headers=get_headers(), proxies=proxy, timeout=20)
-                # check_proxy = requests.get('https://check-host.net/ip', headers=get_headers(), proxies=proxy).text
-            except Exception as err:
-                print(err)
-                request = False
-
-        if request is not False:
-            try:
                 data = request.json()
-            except JSONDecodeError:
-                print(f'DECODE ERROR, PROXY : {proxies.proxy_setting}')
-            else:
                 return data
+            except Exception as err:
+                print(f'ERROR WITH GET JSON. USE PROXY. ERROR CODE : {err}')
+                time.sleep(random.uniform(3, 10))
+
         step += 1
     return False
 
@@ -194,9 +190,11 @@ class Proxy:
                 "http": f"http://{self.proxy.login}:{self.proxy.password}@{self.proxy.ip}:{self.proxy.port}",
                 "https": f"https://{self.proxy.login}:{self.proxy.password}@{self.proxy.ip}:{self.proxy.port}"
             }
-            self.file = ProxyFile.objects.all()[0].proxy_file.path
         except IndexError:
             self.proxy_setting = False
+
+    def get_proxy_settings(self):
+        return self.proxy_setting
 
 
 def start(use_proxy=False):
